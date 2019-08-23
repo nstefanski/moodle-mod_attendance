@@ -622,7 +622,10 @@ class mod_attendance_renderer extends plugin_renderer_base {
             $table->align[] = 'left';
         }
         foreach ($takedata->statuses as $st) {
-            $table->head[] = html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
+            //$table->head[] = html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
+            //    'title' => get_string('setallstatusesto', 'attendance', $st->description)));
+            $table->head[] = ($st->acronym == "L") ? html_writer::div("L", '', array('title' => $st->description)) : //tk
+                html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
                 'title' => get_string('setallstatusesto', 'attendance', $st->description)));
             $table->align[] = 'center';
             $table->size[] = '20px';
@@ -658,12 +661,17 @@ class mod_attendance_renderer extends plugin_renderer_base {
                 'name' => 'setallstatuses',
                 'class' => "st{$st->id}",
             );
-            $row->cells[] = html_writer::empty_tag('input', $attribs);
+            //$row->cells[] = html_writer::empty_tag('input', $attribs);
+            $row->cells[] = ($st->acronym == "L") ? '' : html_writer::empty_tag('input', $attribs); //tk
             // Select all radio buttons of the same status.
             $PAGE->requires->js_amd_inline("
                 require(['jquery'], function($) {
                     $('#radiocheckstatus".$st->id."').click(function(e) {
                         $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                        
+                        //tk hide all remarks and select null option
+                        $('#attendancetakeform').find('.remarks').addClass('cbd-accessible-hide');
+                        $('#attendancetakeform').find('.remarks option.remarksnullopt').prop('selected', true);
                     });
                 });");
         }
@@ -834,7 +842,19 @@ class mod_attendance_renderer extends plugin_renderer_base {
                         'value' => $st->id);
                 if (array_key_exists($user->id, $takedata->sessionlog) and $st->id == $takedata->sessionlog[$user->id]->statusid) {
                     $params['checked'] = '';
+                    $showremarks = ($st->acronym == "L") ? true : false; //tk
                 }
+                // TK if 'L', show 'Remarks' -- else, hide and set 'Remarks' to null
+                global $PAGE;
+                $params['id'] = 'radiocheck'.$st->acronym.$user->id;
+                $f = ($st->acronym == "L") ? "removeClass" : "addClass";
+                $js = "require(['jquery'], function($) {
+                          $('#radiocheck".$st->acronym.$user->id."').click(function(e) {
+                              $('#attendancetakeform').find('#remarks".$user->id."').".$f."('cbd-accessible-hide');"
+                $js .= ($f=="addClass") ? "$('#attendancetakeform').find('#remarksnullopt".$user->id."').prop('selected', true);" : "";
+                $js .=  "});
+                      });";
+                $PAGE->requires->js_amd_inline($js); //tk
 
                 $input = html_writer::empty_tag('input', $params);
 
@@ -845,13 +865,25 @@ class mod_attendance_renderer extends plugin_renderer_base {
                 $celldata['text'][] = $input;
             }
             $params = array(
-                    'type'  => 'text',
+                    //'type'  => 'text',
                     'name'  => 'remarks'.$user->id,
-                    'maxlength' => 255);
+                    'id'    => 'remarks'.$user->id); //tk
+                    //'maxlength' => 255);
             if (array_key_exists($user->id, $takedata->sessionlog)) {
                 $params['value'] = $takedata->sessionlog[$user->id]->remarks;
             }
-            $celldata['text'][] = html_writer::empty_tag('input', $params);
+            //$celldata['text'][] = html_writer::empty_tag('input', $params);
+            // TK create a null option and options for 15 minute steps
+            $options = html_writer::tag('option', null, array('value' => '', 'selected' => '', 'class' => 'remarksnullopt', 'id' => 'remarksnullopt'.$user->id));
+            for($i = 15; $i < ($takedata->sessioninfo->duration / 60); $i += 15) {
+              	if ($i and $i == $params['value']) {
+            	      $options .= html_writer::tag('option', $i, array('value' => $i, 'selected' => ''));
+              	} else {
+              	    $options .= html_writer::tag('option', $i, array('value' => $i));
+              	}
+            }
+            $params['class'] = $showremarks ? 'remarks' : 'remarks cbd-accessible-hide';
+            $celldata['text'][] = html_writer::tag('select', $options, $params); //tk
 
             if ($user->enrolmentstart > $takedata->sessioninfo->sessdate + $takedata->sessioninfo->duration) {
                 $celldata['warning'] = get_string('enrolmentstart', 'attendance',
