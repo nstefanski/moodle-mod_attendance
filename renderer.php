@@ -624,7 +624,8 @@ class mod_attendance_renderer extends plugin_renderer_base {
         foreach ($takedata->statuses as $st) {
             //$table->head[] = html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
             //    'title' => get_string('setallstatusesto', 'attendance', $st->description)));
-            $table->head[] = ($st->acronym == "L") ? html_writer::div("L", '', array('title' => $st->description)) : //tk
+            $table->head[] = ($st->acronym == "L" || $st->acronym == "F") ? 
+                html_writer::div($st->acronym, '', array('title' => $st->description)) : //tk
                 html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
                 'title' => get_string('setallstatusesto', 'attendance', $st->description)));
             $table->align[] = 'center';
@@ -662,7 +663,8 @@ class mod_attendance_renderer extends plugin_renderer_base {
                 'class' => "st{$st->id}",
             );
             //$row->cells[] = html_writer::empty_tag('input', $attribs);
-            $row->cells[] = ($st->acronym == "L") ? '' : html_writer::empty_tag('input', $attribs); //tk
+            $row->cells[] = ($st->acronym == "L" || $st->acronym == "F") ? '' : 
+                html_writer::empty_tag('input', $attribs); //tk
             // Select all radio buttons of the same status.
             $PAGE->requires->js_amd_inline("
                 require(['jquery'], function($) {
@@ -842,12 +844,12 @@ class mod_attendance_renderer extends plugin_renderer_base {
                         'value' => $st->id);
                 if (array_key_exists($user->id, $takedata->sessionlog) and $st->id == $takedata->sessionlog[$user->id]->statusid) {
                     $params['checked'] = '';
-                    $showremarks = ($st->acronym == "L") ? true : false; //tk
+                    $showremarks = ($st->acronym == "L" || $st->acronym == "F") ? true : false; //tk
                 }
                 // TK if 'L', show 'Remarks' -- else, hide and set 'Remarks' to null
                 global $PAGE;
                 $params['id'] = 'radiocheck'.$st->acronym.$user->id;
-                $f = ($st->acronym == "L") ? "removeClass" : "addClass";
+                $f = ($st->acronym == "L" || $st->acronym == "F") ? "removeClass" : "addClass";
                 $js = "require(['jquery'], function($) {
                           $('#radiocheck".$st->acronym.$user->id."').click(function(e) {
                               $('#attendancetakeform').find('#remarks".$user->id."').".$f."('cbd-accessible-hide');"
@@ -881,6 +883,9 @@ class mod_attendance_renderer extends plugin_renderer_base {
               	} else {
               	    $options .= html_writer::tag('option', $i, array('value' => $i));
               	}
+            }
+            if($params['value'] && $params['value'] % 15 > 0 ){ //TK uneven fractional value
+            	  $options .= html_writer::tag('option', $params['value'], array('value' => $i, 'selected' => ''));
             }
             $params['class'] = $showremarks ? 'remarks' : 'remarks cbd-accessible-hide';
             $celldata['text'][] = html_writer::tag('select', $options, $params); //tk
