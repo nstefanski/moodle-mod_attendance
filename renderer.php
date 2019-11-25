@@ -884,7 +884,7 @@ class mod_attendance_renderer extends plugin_renderer_base {
               	    $options .= html_writer::tag('option', $i, array('value' => $i));
               	}
             }
-            if($params['value'] && $params['value'] % 15 > 0 ){ //TK uneven fractional value
+            if($params['value'] && fmod($params['value'],15) > 0 ){ //TK uneven fractional value
             	  $options .= html_writer::tag('option', $params['value'], array('value' => $i, 'selected' => ''));
             }
             $params['class'] = $showremarks ? 'remarks' : 'remarks cbd-accessible-hide';
