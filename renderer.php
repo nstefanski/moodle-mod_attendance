@@ -28,6 +28,7 @@ require_once(dirname(__FILE__).'/locallib.php');
 require_once(dirname(__FILE__).'/renderables.php');
 require_once(dirname(__FILE__).'/renderhelpers.php');
 require_once($CFG->libdir.'/tablelib.php');
+require_once($CFG->libdir.'/moodlelib.php');
 
 /**
  * Attendance module renderer class
@@ -253,8 +254,8 @@ class mod_attendance_renderer extends plugin_renderer_base {
         $table->width = '100%';
         $table->head = array(
                 '#',
-                get_string('date'),
-                get_string('time'),
+                get_string('date', 'attendance'),
+                get_string('time', 'attendance'),
                 get_string('sessiontypeshort', 'attendance'),
                 get_string('description', 'attendance'),
                 get_string('actions'),
@@ -414,6 +415,8 @@ class mod_attendance_renderer extends plugin_renderer_base {
      * @return string
      */
     protected function render_attendance_take_data(attendance_take_data $takedata) {
+        user_preference_allow_ajax_update('mod_attendance_statusdropdown', PARAM_TEXT);
+
         $controls = $this->render_attendance_take_controls($takedata);
         $table = html_writer::start_div('no-overflow');
         if ($takedata->pageparams->viewmode == mod_attendance_take_page_params::SORTED_LIST) {
@@ -596,6 +599,26 @@ class mod_attendance_renderer extends plugin_renderer_base {
     }
 
     /**
+     * get statusdropdown
+     *
+     * @return \single_select
+     */
+    private function statusdropdown() {
+        $pref = get_user_preferences('mod_attendance_statusdropdown');
+        if (empty($pref)) {
+            $pref = 'unselected';
+        }
+        $options = array('all' => get_string('statusall', 'attendance'),
+            'unselected' => get_string('statusunselected', 'attendance'));
+
+        $select = new \single_select(new \moodle_url('/'), 'setallstatus-select', $options,
+            $pref, null, 'setallstatus-select');
+        $select->label = get_string('setallstatuses', 'attendance');
+
+        return $select;
+    }
+
+    /**
      * Render take list.
      *
      * @param attendance_take_data $takedata
@@ -634,7 +657,14 @@ class mod_attendance_renderer extends plugin_renderer_base {
             $PAGE->requires->js_amd_inline("
                 require(['jquery'], function($) {
                     $('#checkstatus".$st->id."').click(function(e) {
-                        $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                     if ($('select[name=\"setallstatus-select\"] option:selected').val() == 'all') {
+                            $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                            M.util.set_user_preference('mod_attendance_statusdropdown','all');
+                        }
+                        else {
+                            $('#attendancetakeform').find('input:indeterminate.st".$st->id."').prop('checked', true);
+                            M.util.set_user_preference('mod_attendance_statusdropdown','unselected');
+                        }
                         e.preventDefault();
                     });
                 });");
@@ -648,12 +678,14 @@ class mod_attendance_renderer extends plugin_renderer_base {
 
         // Show a 'select all' row of radio buttons.
         $row = new html_table_row();
-        $row->cells[] = '';
         $row->attributes['class'] = 'setallstatusesrow';
         foreach ($extrasearchfields as $field) {
             $row->cells[] = '';
         }
-        $row->cells[] = html_writer::div(get_string('setallstatuses', 'attendance'), 'setallstatuses');
+
+        $cell = new html_table_cell(html_writer::div($this->output->render($this->statusdropdown()), 'setallstatuses'));
+        $cell->colspan = 2;
+        $row->cells[] = $cell;
         foreach ($takedata->statuses as $st) {
             $attribs = array(
                 'id' => 'radiocheckstatus'.$st->id,
@@ -669,11 +701,22 @@ class mod_attendance_renderer extends plugin_renderer_base {
             $PAGE->requires->js_amd_inline("
                 require(['jquery'], function($) {
                     $('#radiocheckstatus".$st->id."').click(function(e) {
+<<<<<<< HEAD
                         $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
                         
                         //tk hide all remarks and select null option
                         $('#attendancetakeform').find('.remarks').addClass('cbd-accessible-hide');
                         $('#attendancetakeform').find('.remarks option.remarksnullopt').prop('selected', true);
+=======
+                        if ($('select[name=\"setallstatus-select\"] option:selected').val() == 'all') {
+                            $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                            M.util.set_user_preference('mod_attendance_statusdropdown','all');
+                        }
+                        else {
+                            $('#attendancetakeform').find('input:indeterminate.st".$st->id."').prop('checked', true);
+                            M.util.set_user_preference('mod_attendance_statusdropdown','unselected');
+                        }
+>>>>>>> 80f448f94c69a1fd1078f2896201b87c9abede25
                     });
                 });");
         }
@@ -731,7 +774,9 @@ class mod_attendance_renderer extends plugin_renderer_base {
         }
         $table->attributes['class'] = 'generaltable takegrid';
         $table->headspan = $takedata->pageparams->gridcols;
+
         $head = array();
+        $head[] = html_writer::div($this->output->render($this->statusdropdown()), 'setallstatuses');
         foreach ($takedata->statuses as $st) {
             $head[] = html_writer::link("#", $st->acronym, array('id' => 'checkstatus'.$st->id,
                                               'title' => get_string('setallstatusesto', 'attendance', $st->description)));
@@ -739,7 +784,14 @@ class mod_attendance_renderer extends plugin_renderer_base {
             $PAGE->requires->js_amd_inline("
                  require(['jquery'], function($) {
                      $('#checkstatus".$st->id."').click(function(e) {
-                         $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                         if ($('select[name=\"setallstatus-select\"] option:selected').val() == 'unselected') {
+                             $('#attendancetakeform').find('input:indeterminate.st".$st->id."').prop('checked', true);
+                             M.util.set_user_preference('mod_attendance_statusdropdown','unselected');
+                         }
+                         else {
+                             $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
+                             M.util.set_user_preference('mod_attendance_statusdropdown','all');
+                         }
                          e.preventDefault();
                      });
                  });");
@@ -1167,7 +1219,8 @@ class mod_attendance_renderer extends plugin_renderer_base {
                         $output .= html_writer::empty_tag('input', array('type' => 'submit',
                                 'value' => get_string('submit'),
                                 'class' => 'btn btn-secondary'));
-                        $cell = new html_table_cell(html_writer::tag('form', $output, array('action' => $url->out(), 'method' => 'get')));
+                        $cell = new html_table_cell(html_writer::tag('form', $output,
+                            array('action' => $url->out(), 'method' => 'get')));
                     } else {
                         // Student can mark their own attendance.
                         // URL to the page that lets the student modify their attendance.
