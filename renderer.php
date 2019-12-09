@@ -701,22 +701,18 @@ class mod_attendance_renderer extends plugin_renderer_base {
             $PAGE->requires->js_amd_inline("
                 require(['jquery'], function($) {
                     $('#radiocheckstatus".$st->id."').click(function(e) {
-<<<<<<< HEAD
-                        $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
-                        
-                        //tk hide all remarks and select null option
-                        $('#attendancetakeform').find('.remarks').addClass('cbd-accessible-hide');
-                        $('#attendancetakeform').find('.remarks option.remarksnullopt').prop('selected', true);
-=======
                         if ($('select[name=\"setallstatus-select\"] option:selected').val() == 'all') {
                             $('#attendancetakeform').find('.st".$st->id."').prop('checked', true);
                             M.util.set_user_preference('mod_attendance_statusdropdown','all');
+                            
+                            //tk hide all remarks and select null option
+                            $('#attendancetakeform').find('.remarks').addClass('cbd-accessible-hide');
+                            $('#attendancetakeform').find('.remarks option.remarksnullopt').prop('selected', true);
                         }
                         else {
                             $('#attendancetakeform').find('input:indeterminate.st".$st->id."').prop('checked', true);
                             M.util.set_user_preference('mod_attendance_statusdropdown','unselected');
                         }
->>>>>>> 80f448f94c69a1fd1078f2896201b87c9abede25
                     });
                 });");
         }
@@ -904,7 +900,7 @@ class mod_attendance_renderer extends plugin_renderer_base {
                 $f = ($st->acronym == "L" || $st->acronym == "F") ? "removeClass" : "addClass";
                 $js = "require(['jquery'], function($) {
                           $('#radiocheck".$st->acronym.$user->id."').click(function(e) {
-                              $('#attendancetakeform').find('#remarks".$user->id."').".$f."('cbd-accessible-hide');"
+                              $('#attendancetakeform').find('#remarks".$user->id."').".$f."('cbd-accessible-hide');";
                 $js .= ($f=="addClass") ? "$('#attendancetakeform').find('#remarksnullopt".$user->id."').prop('selected', true);" : "";
                 $js .=  "});
                       });";
